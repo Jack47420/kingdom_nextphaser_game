@@ -11,9 +11,10 @@ interface GameMapProps {
 }
 
 // Dynamically import Phaser components with no SSR
+// @ts-ignore - Dynamic import type mismatch is expected
 const PhaserGame = dynamic(() => import('@/app/game/PhaserGame').then(mod => mod.PhaserGame), {
   ssr: false,
-});
+}) as any;
 
 export function GameMap({ gameState, onTileClick }: GameMapProps) {
   return (

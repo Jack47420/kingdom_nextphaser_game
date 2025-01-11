@@ -8,17 +8,13 @@ import { initialResources } from './data/initial-resources';
 import { GameState, MapTile } from './types/game';
 import { generateInitialMap } from './lib/map-utils';
 import { toast } from 'sonner';
-
-const UNLOCK_COST = {
-  wood: 50,
-  stone: 30
-};
+import { GRID_SIZE, UNLOCK_COST, RESOURCE_RATES, UPDATE_INTERVAL } from './config/game-config';
 
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>(() => ({
     resources: initialResources,
     lastUpdate: Date.now(),
-    map: generateInitialMap(8),
+    map: generateInitialMap(GRID_SIZE),
   }));
 
   const handleTileClick = (x: number, y: number) => {
@@ -29,7 +25,7 @@ export default function Home() {
       const hasAdjacentUnlocked = [
         [x-1, y], [x+1, y], [x, y-1], [x, y+1]
       ].some(([adjX, adjY]) => 
-        adjX >= 0 && adjX < 8 && adjY >= 0 && adjY < 8 && 
+        adjX >= 0 && adjX < GRID_SIZE && adjY >= 0 && adjY < GRID_SIZE && 
         gameState.map[adjY][adjX].unlocked
       );
 
@@ -47,7 +43,7 @@ export default function Home() {
         return;
       }
 
-      // Unlock the tile
+      // Unlock the tile and deduct resources
       setGameState(prev => ({
         ...prev,
         resources: prev.resources.map(r => ({
@@ -64,13 +60,15 @@ export default function Home() {
               ? { ...tile, unlocked: true }
               : tile
           )
-        )
+        ),
+        selectedTile: { x, y }
       }));
       
       toast.success('New territory unlocked!');
+      return;
     }
-
-    // Select/deselect tile
+    
+    // Only handle selection if the tile is already unlocked
     setGameState(prev => ({
       ...prev,
       selectedTile: prev.selectedTile?.x === x && prev.selectedTile?.y === y
@@ -93,9 +91,7 @@ export default function Home() {
             )
           ).length;
 
-          const baseRate = resource.category === 'basic' ? 1 :
-                          resource.category === 'rare' ? 0.1 :
-                          0.2;
+          const baseRate = RESOURCE_RATES[resource.category];
 
           return {
             ...resource,
@@ -112,7 +108,7 @@ export default function Home() {
           lastUpdate: Date.now()
         };
       });
-    }, 1000);
+    }, UPDATE_INTERVAL);
 
     return () => clearInterval(timer);
   }, []);

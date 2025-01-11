@@ -11,7 +11,17 @@ interface ResourceCardProps {
 }
 
 export function ResourceCard({ resource }: ResourceCardProps) {
-  const IconComponent = Icons[resource.icon as keyof typeof Icons];
+  const IconComponent = Icons[resource.icon as keyof typeof Icons] as React.ElementType;
+  
+  // Format the amount based on resource category
+  const formatAmount = (amount: number, category: string) => {
+    if (category === 'basic') {
+      return Math.floor(amount);
+    }
+    return amount.toFixed(2);
+  };
+
+  const displayAmount = formatAmount(resource.amount, resource.category);
   
   return (
     <Card className={cn(
@@ -21,7 +31,7 @@ export function ResourceCard({ resource }: ResourceCardProps) {
     )}>
       <div className="flex items-center gap-2 mb-1">
         {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
-        <span className="font-medium text-sm">{resource.amount}/{resource.maxAmount}</span>
+        <span className="font-medium text-sm">{displayAmount}/{resource.maxAmount}</span>
       </div>
       <Progress 
         value={(resource.amount / resource.maxAmount) * 100} 

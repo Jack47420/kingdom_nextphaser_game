@@ -1,4 +1,5 @@
 import { TerrainType, MapTile } from '../types/game';
+import { GRID_SIZE, INITIAL_UNLOCKED_POSITION } from '../config/game-config';
 
 // Use a deterministic pattern for initial map generation
 export function generateInitialMap(size: number): MapTile[][] {
@@ -17,7 +18,8 @@ export function generateInitialMap(size: number): MapTile[][] {
         x,
         y,
         terrain: pattern[terrainIndex],
-        unlocked: x === 3 && y === 3 // Center tile starts unlocked
+        // Only unlock the center tile
+        unlocked: x === INITIAL_UNLOCKED_POSITION.x && y === INITIAL_UNLOCKED_POSITION.y
       });
     }
     map.push(row);

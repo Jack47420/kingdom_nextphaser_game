@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { GameState } from '../types/game';
 import { Game, AUTO, Scale } from 'phaser';
 import { GameScene } from './GameScene';
+import { GRID_SIZE, TILE_SIZE } from '../config/game-config';
 
 interface PhaserGameProps {
   gameState: GameState;
@@ -18,37 +19,41 @@ export function PhaserGame({ gameState, onTileClick }: PhaserGameProps) {
 
   // Initialize Phaser
   useEffect(() => {
-    if (typeof window === 'undefined' || !containerRef.current || isInitialized.current) {
+    if (typeof window === 'undefined' || !containerRef.current) {
       return;
     }
 
-    isInitialized.current = true;
     const scene = new GameScene(onTileClick);
     sceneRef.current = scene;
 
-    const config = {
-      type: AUTO,
-      parent: containerRef.current,
-      width: 512,
-      height: 512,
-      backgroundColor: '#2d2d2d',
-      scene: scene,
-      scale: {
-        mode: Scale.FIT,
-        autoCenter: Scale.CENTER_BOTH
-      }
-    };
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      const config = {
+        type: AUTO,
+        parent: containerRef.current,
+        width: GRID_SIZE * TILE_SIZE,
+        height: GRID_SIZE * TILE_SIZE,
+        backgroundColor: '#2d2d2d',
+        scene: scene,
+        scale: {
+          mode: Scale.FIT,
+          autoCenter: Scale.CENTER_BOTH
+        }
+      };
 
-    gameRef.current = new Game(config);
+      gameRef.current = new Game(config);
+    } else if (gameRef.current) {
+      gameRef.current.scene.remove('GameScene');
+      gameRef.current.scene.add('GameScene', scene, true);
+    }
 
     return () => {
-      if (gameRef.current) {
+      if (gameRef.current && !isInitialized.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
-        isInitialized.current = false;
       }
     };
-  }, []); // Empty dependency array
+  }, [onTileClick]); // Add onTileClick to dependencies
 
   // Update game state separately
   useEffect(() => {
