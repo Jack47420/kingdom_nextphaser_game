@@ -18,7 +18,7 @@ const PhaserGame = dynamic(() => import('@/app/game/PhaserGame').then(mod => mod
 
 export function GameMap({ gameState, onTileClick }: GameMapProps) {
   return (
-    <Card className="p-4 bg-gradient-to-br from-gray-900 to-gray-800">
+    <Card className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 border-gray-200 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700">
       <div className="w-full aspect-square max-w-[512px] mx-auto">
         <PhaserGame gameState={gameState} onTileClick={onTileClick} />
       </div>

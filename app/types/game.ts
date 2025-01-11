@@ -17,9 +17,12 @@ export interface MapTile {
   producing?: string; // resource id
 }
 
+export type GamePhase = 'selecting-start' | 'playing';
+
 export interface GameState {
   resources: Resource[];
   lastUpdate: number;
   map: MapTile[][];
   selectedTile?: { x: number; y: number };
+  phase: GamePhase;
 }

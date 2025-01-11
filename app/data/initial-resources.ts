@@ -8,7 +8,7 @@ export const initialResources: Resource[] = [
     amount: 100,
     icon: 'Trees',
     category: 'basic',
-    maxAmount: 1000
+    maxAmount: 10000
   },
   {
     id: 'stone',
@@ -16,7 +16,7 @@ export const initialResources: Resource[] = [
     amount: 50,
     icon: 'Mountain',
     category: 'basic',
-    maxAmount: 1000
+    maxAmount: 10000
   },
   {
     id: 'iron',
@@ -24,7 +24,7 @@ export const initialResources: Resource[] = [
     amount: 30,
     icon: 'Hammer',
     category: 'basic',
-    maxAmount: 800
+    maxAmount: 8000
   },
   {
     id: 'copper',
@@ -32,7 +32,7 @@ export const initialResources: Resource[] = [
     amount: 40,
     icon: 'CircleDot',
     category: 'basic',
-    maxAmount: 800
+    maxAmount: 8000
   },
   {
     id: 'coal',
@@ -40,7 +40,7 @@ export const initialResources: Resource[] = [
     amount: 60,
     icon: 'Circle',
     category: 'basic',
-    maxAmount: 1000
+    maxAmount: 10000
   },
   {
     id: 'leather',
@@ -48,7 +48,7 @@ export const initialResources: Resource[] = [
     amount: 25,
     icon: 'Scroll',
     category: 'basic',
-    maxAmount: 500
+    maxAmount: 5000
   },
   {
     id: 'cloth',
@@ -56,7 +56,7 @@ export const initialResources: Resource[] = [
     amount: 35,
     icon: 'Shirt',
     category: 'basic',
-    maxAmount: 500
+    maxAmount: 5000
   },
   {
     id: 'herbs',
@@ -64,7 +64,7 @@ export const initialResources: Resource[] = [
     amount: 45,
     icon: 'Flower2',
     category: 'basic',
-    maxAmount: 300
+    maxAmount: 3000
   },
   {
     id: 'water',
@@ -72,7 +72,7 @@ export const initialResources: Resource[] = [
     amount: 200,
     icon: 'Droplets',
     category: 'basic',
-    maxAmount: 2000
+    maxAmount: 20000
   },
   {
     id: 'clay',
@@ -80,7 +80,7 @@ export const initialResources: Resource[] = [
     amount: 70,
     icon: 'Square',
     category: 'basic',
-    maxAmount: 700
+    maxAmount: 7000
   },
   // Gems
   {
@@ -89,7 +89,7 @@ export const initialResources: Resource[] = [
     amount: 5,
     icon: 'Diamond',
     category: 'rare',
-    maxAmount: 100
+    maxAmount: 1000
   },
   {
     id: 'ruby',
@@ -97,7 +97,7 @@ export const initialResources: Resource[] = [
     amount: 8,
     icon: 'Gem',
     category: 'rare',
-    maxAmount: 150
+    maxAmount: 1500
   },
   {
     id: 'sapphire',
@@ -105,7 +105,7 @@ export const initialResources: Resource[] = [
     amount: 6,
     icon: 'Hexagon',
     category: 'rare',
-    maxAmount: 120
+    maxAmount: 1200
   },
   // Crafted
   {
@@ -114,7 +114,7 @@ export const initialResources: Resource[] = [
     amount: 5,
     icon: 'Wrench',
     category: 'crafted',
-    maxAmount: 50
+    maxAmount: 500
   },
   {
     id: 'weapons',
@@ -122,6 +122,6 @@ export const initialResources: Resource[] = [
     amount: 3,
     icon: 'Sword',
     category: 'crafted',
-    maxAmount: 30
+    maxAmount: 300
   }
 ];
