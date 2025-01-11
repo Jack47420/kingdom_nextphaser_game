@@ -204,7 +204,7 @@ export default function Home() {
             )
           ).length;
 
-          const baseRate = RESOURCE_RATES[resource.category];
+          const baseRate = RESOURCE_RATES[resource.rarity];
           const timeFactor = UPDATE_RATE / 1000; // Convert rate to per-update interval
 
           return {

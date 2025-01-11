@@ -1,6 +1,6 @@
 // Game board configuration
-export const GRID_SIZE = 9;
-export const TILE_SIZE = 64;
+export const GRID_SIZE = 6;
+export const TILE_SIZE = 90;
 
 // Resource costs
 export const UNLOCK_COST = {
@@ -10,20 +10,16 @@ export const UNLOCK_COST = {
 
 // Resource generation rates (per second)
 export const RESOURCE_RATES = {
-  basic: 2,
-  rare: 0.1,
-  crafted: 0.2
+  common: 2,
+  uncommon: 1,
+  rare: 0.5,
+  epic: 0.2,
+  legendary: 0.1
 };
 
 // Game timing configuration (in milliseconds)
 export const REFRESH_RATE = 1000 / 60; // 60 FPS for smooth UI updates
 export const UPDATE_RATE = 1000; // Resource updates every second
-
-// Initial unlocked position (center tile)
-export const INITIAL_UNLOCKED_POSITION = {
-  x: Math.floor(GRID_SIZE / 2),
-  y: Math.floor(GRID_SIZE / 2)
-};
 
 interface UnlockCost {
   wood: number;
@@ -44,8 +40,8 @@ export const SECOND_TILE_COST: UnlockCost = {
 
 // Cost growth per unlocked tile (added to base cost)
 export const COST_GROWTH_PER_TILE: UnlockCost = {
-  wood: 0,
-  stone: 0
+  wood: 3,
+  stone: 2
 };
 
 // Function to calculate unlock costs based on number of unlocked tiles

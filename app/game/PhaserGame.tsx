@@ -39,9 +39,16 @@ export function PhaserGame({ gameState, onTileClick }: PhaserGameProps) {
         height: GRID_SIZE * TILE_SIZE,
         backgroundColor: isDarkTheme ? '#1a1a1a' : '#f1f5f9',
         scene: scene,
+        antialias: true,
+        pixelArt: true,
+        roundPixels: true,
         scale: {
           mode: Scale.FIT,
-          autoCenter: Scale.CENTER_BOTH
+          autoCenter: Scale.CENTER_BOTH,
+          zoom: 1
+        },
+        render: {
+          pixelArt: true
         },
         audio: {
           disableWebAudio: false,

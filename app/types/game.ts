@@ -3,7 +3,9 @@ export interface Resource {
   name: string;
   amount: number;
   icon: string;
-  category: 'basic' | 'crafted' | 'rare';
+  category: 'basic' | 'crafted' | 'gems';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  origin: 'grass' | 'forest' | 'mountain' | 'water' | 'mine' | 'crafted';
   maxAmount: number;
 }
 

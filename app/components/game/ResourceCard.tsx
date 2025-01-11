@@ -26,15 +26,21 @@ export function ResourceCard({ resource, producingTiles = 0 }: ResourceCardProps
   };
 
   const displayAmount = formatAmount(resource.amount, resource.category);
-  const growthRate = RESOURCE_RATES[resource.category] * producingTiles;
+  const growthRate = RESOURCE_RATES[resource.rarity] * producingTiles;
   const displayRate = formatAmount(growthRate, resource.category);
   
   const getResourceDescription = () => {
-    switch (resource.category) {
-      case 'basic':
-        return 'A basic resource gathered from the world';
-      case 'rare':
-        return 'A rare and valuable resource';
+    switch (resource.origin) {
+      case 'forest':
+        return 'A basic resource gathered from a forest';
+      case 'mountain':
+        return 'A basic resource gathered from a mountain';
+      case 'mine':
+        return 'A basic resource gathered from a mine';
+      case 'water':
+        return 'A basic resource gathered from a water';
+      case 'grass':
+        return 'A basic resource gathered from a grass';
       case 'crafted':
         return 'A resource crafted from other materials';
     }
@@ -46,7 +52,7 @@ export function ResourceCard({ resource, producingTiles = 0 }: ResourceCardProps
         <TooltipTrigger asChild>
           <Card className={cn(
             'transition-all duration-200 hover:shadow-lg p-2 bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 min-w-[150px] max-w-[250px]',
-            resource.category === 'rare' && 'border-amber-500/50 bg-amber-50/50 dark:border-amber-700/50 dark:bg-gray-800/90',
+            resource.category === 'gems' && 'border-amber-500/50 bg-amber-50/50 dark:border-amber-700/50 dark:bg-gray-800/90',
             resource.category === 'crafted' && 'border-blue-500/50 bg-blue-50/50 dark:border-blue-700/50 dark:bg-gray-800/90'
           )}>
             <div className="flex items-center justify-between mb-1">

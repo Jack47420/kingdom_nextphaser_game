@@ -10,16 +10,17 @@ interface ResourceGridProps {
 
 export function ResourceGrid({ resources, map }: ResourceGridProps) {
   const basicResources = resources.filter(r => r.category === 'basic');
-  const rareResources = resources.filter(r => r.category === 'rare');
+  const rareResources = resources.filter(r => r.category === 'gems');
   const craftedResources = resources.filter(r => r.category === 'crafted');
 
   const getProducingTiles = (resourceId: string): number => {
     return map.flat().filter(tile => 
       tile.unlocked && (
         (tile.terrain === 'forest' && resourceId === 'wood') ||
-        (tile.terrain === 'mountain' && resourceId === 'stone') ||
-        (tile.terrain === 'mine' && (resourceId === 'iron' || resourceId === 'copper')) ||
-        (tile.terrain === 'water' && resourceId === 'water')
+        (tile.terrain === 'mountain' && (resourceId === 'stone' || resourceId === 'coal')) ||
+        (tile.terrain === 'mine' && (resourceId === 'iron' || resourceId === 'copper' || resourceId === 'diamond' || resourceId === 'ruby' || resourceId === 'sapphire')) ||
+        (tile.terrain === 'water' && resourceId === 'water') ||
+        (tile.terrain === 'grass' && (resourceId === 'leather' || resourceId === 'cloth' || resourceId === 'herbs'))
       )
     ).length;
   };
