@@ -1,0 +1,7 @@
+This is a binary file. You'll need to create a tileset image with 6 frames (64x64 pixels each):
+Frame 0: Locked tile (dark gray)
+Frame 1: Grass tile (light green)
+Frame 2: Forest tile (dark green)
+Frame 3: Mountain tile (gray/brown)
+Frame 4: Water tile (blue)
+Frame 5: Mine tile (brown/orange)
