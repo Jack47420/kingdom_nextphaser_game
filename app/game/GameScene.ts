@@ -2,13 +2,13 @@ import { Scene, GameObjects } from 'phaser';
 import { TerrainType, MapTile, GameState, Settlement } from '../types/game';
 import { GRID_SIZE, TILE_SIZE } from '../config/game-config';
 import { calculateUnlockCost } from '../config/unlock-costs';
+import { getIconPositions } from '../lib/icon-positions';
 
 // Interface for our game tiles, extending Phaser's Rectangle with custom properties
 interface TileSprite extends GameObjects.Rectangle {
   tileData: MapTile;
-  icon?: GameObjects.Text;  // Optional text object for displaying terrain icons
-  costText?: GameObjects.Text;  // Add this for hover cost display
-  settlementIcon?: GameObjects.Text; // Add settlement icon
+  terrainIcon?: GameObjects.Text;  // Terrain icon
+  icons: GameObjects.Text[];  // Array of all icons (terrain, settlement, etc.)
   updateCost: (unlocked: boolean, unlockedTilesCount: number) => void;
 }
 
@@ -85,7 +85,7 @@ export class GameScene extends Scene {
     });
   }
 
-  showSettlementPreview(show: boolean, type?: Settlement['type']) {
+  showSettlementPreview(show: boolean, type?: 'village' | 'town' | 'city') {
     if (this.settlementPreview) {
       if (show && type) {
         this.settlementPreview.setText(this.getSettlementIcon(type));
@@ -110,124 +110,81 @@ export class GameScene extends Scene {
           this.getTileColor(false)
         ) as TileSprite;
         
+        tile.tileData = this.map[y][x];
+        tile.icons = [];
+
         // Add visual and interactive properties
         tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
         tile.setInteractive();
 
-        // Create cost text (hidden by default)
-        tile.costText = this.add.text(
-          x * this.tileSize + this.tileSize / 2,
-          y * this.tileSize + this.tileSize * 0.8,
-          '',
-          {
-            fontSize: '12px',
-            align: 'center',
-            color: this.isDarkTheme ? '#ffffff' : '#000000'
-          }
-        ).setOrigin(0.5);
-        tile.costText.setVisible(false);
+        // Create and position icons
+        tile.icons = this.createTileIcons(tile, x, y);
 
-        // Add settlement icon (hidden by default)
-        tile.settlementIcon = this.add.text(
-          x * this.tileSize + this.tileSize / 2,
-          y * this.tileSize + this.tileSize / 2,
-          '',
-          {
-            fontSize: '32px',
-            align: 'center'
-          }
-        ).setOrigin(0.5);
-        tile.settlementIcon.setVisible(false);
 
-        // Track hover state
-        let isHovered = false;
-
-        // Add hover events
-        tile.on('pointerover', () => {
-          if (!this.map[y][x].unlocked) {
-            isHovered = true;
-            
-            // Check if adjacent to an unlocked tile
-            const hasAdjacentUnlocked = [
-              [x-1, y], [x+1, y], [x, y-1], [x, y+1]
-            ].some(([adjX, adjY]) => 
-              adjX >= 0 && adjX < GRID_SIZE && adjY >= 0 && adjY < GRID_SIZE && 
-              this.map[adjY][adjX].unlocked
-            );
-            
-            if (!hasAdjacentUnlocked && this.map.flat().some(t => t.unlocked)) {
-              tile.costText?.setText('Not connected to owned tiles');
-            } else {
-              const unlockedTilesCount = this.map.flat().filter(t => t.unlocked).length;
-              const unlockCost = calculateUnlockCost(unlockedTilesCount);
-              
-              if (unlockedTilesCount === 0) {
-                tile.costText?.setText('Free!');
-              } else if (unlockedTilesCount === 1) {
-                tile.costText?.setText(`🪵${unlockCost.wood}`);
-              } else {
-                tile.costText?.setText(`🪵${unlockCost.wood} 🪨${unlockCost.stone}`);
-              }
-            }
-            tile.costText?.setVisible(true);
-          }
-        });
-
-        tile.on('pointerout', () => {
-          isHovered = false;
-          tile.costText?.setVisible(false);
-        });
-
-        // Update the updateCost method
-        tile.updateCost = (unlocked: boolean, unlockedTilesCount: number) => {
-          if (tile.costText) {
-            if (isHovered && !unlocked) {
-              // Check if adjacent to an unlocked tile
-              const hasAdjacentUnlocked = [
-                [x-1, y], [x+1, y], [x, y-1], [x, y+1]
-              ].some(([adjX, adjY]) => 
-                adjX >= 0 && adjX < GRID_SIZE && adjY >= 0 && adjY < GRID_SIZE && 
-                this.map[adjY][adjX].unlocked
-              );
-
-              if (!hasAdjacentUnlocked) {
-                tile.costText.setText('Not connected to owned tiles');
-              } else {
-                const unlockCost = calculateUnlockCost(unlockedTilesCount);
-                if (unlockedTilesCount === 0) {
-                  tile.costText.setText('Free!');
-                } else if (unlockedTilesCount === 1) {
-                  tile.costText.setText(`🪵${unlockCost.wood}`);
-                } else {
-                  tile.costText.setText(`🪵${unlockCost.wood} 🪨${unlockCost.stone}`);
-                }
-              }
-              tile.costText.setVisible(true);
-            } else {
-              tile.costText.setVisible(false);
-            }
-          }
-        };
         
         tile.on('pointerdown', () => {
           this.onTileClick(x, y);  // Handle clicks
         });
 
-        // Add centered terrain icon
-        tile.icon = this.add.text(
-          x * this.tileSize + this.tileSize / 2,
-          y * this.tileSize + this.tileSize / 2,
-          this.getTerrainIcon('locked'),
-          {
-            fontSize: '24px',
-            align: 'center',
-            padding: { x: 2, y: 2 }
-          }
-        ).setOrigin(0.5);
-        
         this.tiles[y][x] = tile;
       }
     }
+  }
+
+  private createTileIcons(tile: TileSprite, x: number, y: number) {
+    const icons: GameObjects.Text[] = [];
+    const tileData = this.map[y][x];
+    const centerX = x * this.tileSize + this.tileSize / 2;
+    const centerY = y * this.tileSize + this.tileSize / 2;
+
+    // Create terrain icon
+    const terrainIcon = this.add.text(
+      centerX,
+      centerY,
+      this.getTerrainIcon(tileData.unlocked ? tileData.terrain : 'locked'),
+      {
+        fontSize: '24px',
+        align: 'center',
+      }
+    ).setOrigin(0.5);
+    icons.push(terrainIcon);
+
+    // Create settlement icon if exists
+    if (tileData.settlement) {
+      const settlementIcon = this.add.text(
+        centerX,
+        centerY,
+        this.getSettlementIcon(tileData.settlement.type),
+        {
+          fontSize: '24px',
+          align: 'center',
+        }
+      ).setOrigin(0.5);
+      icons.push(settlementIcon);
+    }
+
+    // Position icons based on count and stored layout
+    const { positions, layoutIndex } = getIconPositions(icons.length, tileData.iconLayout);
+    
+    // Store the layout if not already stored
+    if (tileData.iconLayout === undefined) {
+      tileData.iconLayout = layoutIndex;
+    }
+    
+    icons.forEach((icon, index) => {
+      const pos = positions[index];
+      icon.setPosition(centerX + pos.x, centerY + pos.y);
+    });
+
+    return icons;
+  }
+
+  private updateTileIcons(tile: TileSprite) {
+    // Remove existing icons
+    tile.icons.forEach(icon => icon.destroy());
+    
+    // Create new icons with updated positions
+    tile.icons = this.createTileIcons(tile, tile.tileData.x, tile.tileData.y);
   }
 
   // Updates the visual state when game state changes
@@ -243,46 +200,27 @@ export class GameScene extends Scene {
       gameState.selectedSettlementType
     );
     
-    // Update each tile's appearance based on new state
+    // Update each tile's appearance
     for (let y = 0; y < this.map.length; y++) {
       for (let x = 0; x < this.map[y].length; x++) {
         const tileData = this.map[y][x];
         const tile = this.tiles[y]?.[x];
         
         if (tile && tileData) {
-          // Update tile color based on locked/unlocked state
+          tile.tileData = tileData;
           tile.setFillStyle(this.getTileColor(tileData.unlocked));
           tile.setAlpha(tileData.unlocked ? 1 : 0.7);
           
-          // Update terrain icon - show lock if not unlocked
-          if (tile.icon) {
-            const iconToShow = tileData.unlocked ? tileData.terrain : 'locked';
-            tile.icon.setText(this.getTerrainIcon(iconToShow));
-          }
+          // Update icons
+          this.updateTileIcons(tile);
           
-          // Update settlement icon if there's a settlement
-          if (tile.settlementIcon) {
-            if (tileData.settlement) {
-              tile.settlementIcon.setText(this.getSettlementIcon(tileData.settlement.type));
-              tile.settlementIcon.setVisible(true);
-            } else {
-              tile.settlementIcon.setVisible(false);
-            }
-          }
-          
-          // Use the new update method with unlocked tiles count
-          tile.updateCost(tileData.unlocked, unlockedTilesCount);
-          
-          // Highlight selected tile
+          // Update selection highlight
           if (gameState.selectedTile?.x === x && gameState.selectedTile?.y === y) {
             tile.setStrokeStyle(2, 0xffff00);
-          } else {
-            tile.setStrokeStyle(1, 0x000000);
-          }
-
-          // Highlight valid settlement locations
-          if (gameState.phase === 'placing-settlement' && tileData.unlocked && !tileData.settlement) {
+          } else if (gameState.phase === 'placing-settlement' && tileData.unlocked && !tileData.settlement) {
             tile.setStrokeStyle(2, 0x00ff00);
+          } else {
+            tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
           }
         }
       }
@@ -303,10 +241,6 @@ export class GameScene extends Scene {
           tile.setFillStyle(this.getTileColor(tileData.unlocked));
           tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
           
-          // Update text colors
-          if (tile.costText) {
-            tile.costText.setColor(this.isDarkTheme ? '#ffffff' : '#000000');
-          }
         }
       }
     }

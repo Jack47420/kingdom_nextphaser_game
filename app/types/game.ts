@@ -18,6 +18,7 @@ export interface MapTile {
   unlocked: boolean;
   producing?: string; // resource id
   settlement?: Settlement; // Add settlement information
+  iconLayout?: number; // Store the chosen layout index
 }
 
 export interface Settlement {
