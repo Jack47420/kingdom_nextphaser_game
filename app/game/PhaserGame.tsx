@@ -10,18 +10,17 @@ import { useTheme } from 'next-themes';
 interface PhaserGameProps {
   gameState: GameState;
   onTileClick: (x: number, y: number) => void;
+  scale?: number;
 }
 
-export function PhaserGame({ gameState, onTileClick }: PhaserGameProps) {
-  const gameRef = useRef<Game | null>(null);
-  const sceneRef = useRef<GameScene | null>(null);
+export function PhaserGame({ gameState, onTileClick, scale = 1 }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<Game>();
+  const sceneRef = useRef<GameScene>();
   const isInitialized = useRef(false);
   const { theme, systemTheme } = useTheme();
+  const isDarkTheme = (theme === 'system' ? systemTheme : theme) === 'dark';
 
-  const isDarkTheme = theme === 'dark' || (theme === 'system' && systemTheme === 'dark');
-
-  // Initialize Phaser
   useEffect(() => {
     if (typeof window === 'undefined' || !containerRef.current) {
       return;
@@ -43,30 +42,18 @@ export function PhaserGame({ gameState, onTileClick }: PhaserGameProps) {
         pixelArt: true,
         roundPixels: true,
         scale: {
-          mode: Scale.FIT,
-          autoCenter: Scale.CENTER_BOTH,
-          zoom: 1
+          mode: Scale.NONE,
+          zoom: scale,
         },
-        render: {
-          pixelArt: true
-        },
-        audio: {
-          disableWebAudio: false,
-          noAudio: false
-        }
       };
 
       gameRef.current = new Game(config);
-      
-      // Resume audio context after first user interaction
-      document.addEventListener('click', function resumeAudio() {
-        const soundManager = gameRef.current?.sound;
-        if (soundManager && 'context' in soundManager) {
-          (soundManager as any).context.resume();
-        }
-        document.removeEventListener('click', resumeAudio);
-      }, false);
     } else if (gameRef.current) {
+      // Update scale when it changes
+      if (gameRef.current.scale) {
+        gameRef.current.scale.setZoom(scale);
+      }
+      
       // Update background color when theme changes
       if (gameRef.current.canvas) {
         const backgroundColor = isDarkTheme ? '#1a1a1a' : '#f1f5f9';
@@ -75,14 +62,7 @@ export function PhaserGame({ gameState, onTileClick }: PhaserGameProps) {
       gameRef.current.scene.remove('GameScene');
       gameRef.current.scene.add('GameScene', scene, true);
     }
-
-    return () => {
-      if (gameRef.current && !isInitialized.current) {
-        gameRef.current.destroy(true);
-        gameRef.current = null;
-      }
-    };
-  }, [onTileClick, theme, systemTheme, isDarkTheme]);
+  }, [onTileClick, theme, systemTheme, isDarkTheme, scale]);
 
   // Update theme separately
   useEffect(() => {

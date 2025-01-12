@@ -17,9 +17,15 @@ export interface MapTile {
   terrain: TerrainType;
   unlocked: boolean;
   producing?: string; // resource id
+  settlement?: Settlement; // Add settlement information
 }
 
-export type GamePhase = 'selecting-start' | 'playing';
+export interface Settlement {
+  type: 'village' | 'town' | 'city';
+  level: number;
+}
+
+export type GamePhase = 'selecting-start' | 'playing' | 'placing-settlement';
 
 export interface GameState {
   resources: Resource[];
@@ -27,4 +33,6 @@ export interface GameState {
   map: MapTile[][];
   selectedTile?: { x: number; y: number };
   phase: GamePhase;
+  draggingSettlement?: boolean;
+  selectedSettlementType?: Settlement['type'];
 }

@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 interface GameMapProps {
   gameState: GameState;
   onTileClick: (x: number, y: number) => void;
+  scale?: number;
 }
 
 // Dynamically import Phaser components with no SSR
@@ -16,12 +17,10 @@ const PhaserGame = dynamic(() => import('@/app/game/PhaserGame').then(mod => mod
   ssr: false,
 }) as any;
 
-export function GameMap({ gameState, onTileClick }: GameMapProps) {
+export function GameMap({ gameState, onTileClick, scale = 1 }: GameMapProps) {
   return (
-    <Card className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 border-gray-200 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700">
-      <div className="w-full mx-auto">
-        <PhaserGame gameState={gameState} onTileClick={onTileClick} />
-      </div>
-    </Card>
+    <div className="w-full mx-auto">
+      <PhaserGame gameState={gameState} onTileClick={onTileClick} scale={scale} />
+    </div>
   );
 }

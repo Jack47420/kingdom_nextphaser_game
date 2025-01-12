@@ -1,12 +1,14 @@
 import { Scene, GameObjects } from 'phaser';
-import { TerrainType, MapTile, GameState } from '../types/game';
-import { GRID_SIZE, TILE_SIZE, getUnlockCost } from '../config/game-config';
+import { TerrainType, MapTile, GameState, Settlement } from '../types/game';
+import { GRID_SIZE, TILE_SIZE } from '../config/game-config';
+import { calculateUnlockCost } from '../config/unlock-costs';
 
 // Interface for our game tiles, extending Phaser's Rectangle with custom properties
 interface TileSprite extends GameObjects.Rectangle {
   tileData: MapTile;
   icon?: GameObjects.Text;  // Optional text object for displaying terrain icons
   costText?: GameObjects.Text;  // Add this for hover cost display
+  settlementIcon?: GameObjects.Text; // Add settlement icon
   updateCost: (unlocked: boolean, unlockedTilesCount: number) => void;
 }
 
@@ -17,6 +19,7 @@ export class GameScene extends Scene {
   private tiles: TileSprite[][] = [];   // 2D array of visual tile objects
   private onTileClick: (x: number, y: number) => void;  // Click handler passed from parent
   private isDarkTheme: boolean;
+  private settlementPreview?: GameObjects.Text; // Preview of settlement when dragging
   
   constructor(onTileClick: (x: number, y: number) => void, isDarkTheme: boolean) {
     super({ key: 'GameScene' });  // Initialize Phaser Scene with unique key
@@ -47,7 +50,16 @@ export class GameScene extends Scene {
     return icons[terrain];
   }
 
-  // Determines tile color based on locked/unlocked state
+  private getSettlementIcon(type: 'village' | 'town' | 'city'): string {
+    const icons = {
+      village: '🏠',
+      town: '🏘️',
+      city: '🏰'
+    };
+    return icons[type];
+  }
+  
+// Determines tile color based on locked/unlocked state
   private getTileColor(unlocked: boolean): number {
     if (this.isDarkTheme) {
       return unlocked ? 0x444444 : 0x333333;  // Darker greys for dark theme
@@ -58,9 +70,33 @@ export class GameScene extends Scene {
   // Phaser lifecycle method - called when scene starts
   create() {
     this.createTiles();
+    
+    // Setup settlement preview that follows the pointer
+    this.settlementPreview = this.add.text(0, 0, '', {
+      fontSize: '32px'
+    }).setOrigin(0.5);
+    this.settlementPreview.setVisible(false);
+
+    // Update settlement preview position on pointer move
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.settlementPreview) {
+        this.settlementPreview.setPosition(pointer.x, pointer.y);
+      }
+    });
   }
 
-  // Creates the visual representation of the game board
+  showSettlementPreview(show: boolean, type?: Settlement['type']) {
+    if (this.settlementPreview) {
+      if (show && type) {
+        this.settlementPreview.setText(this.getSettlementIcon(type));
+        this.settlementPreview.setVisible(true);
+      } else {
+        this.settlementPreview.setVisible(false);
+      }
+    }
+  }
+  
+// Creates the visual representation of the game board
   private createTiles() {
     for (let y = 0; y < GRID_SIZE; y++) {
       this.tiles[y] = [];
@@ -91,6 +127,18 @@ export class GameScene extends Scene {
         ).setOrigin(0.5);
         tile.costText.setVisible(false);
 
+        // Add settlement icon (hidden by default)
+        tile.settlementIcon = this.add.text(
+          x * this.tileSize + this.tileSize / 2,
+          y * this.tileSize + this.tileSize / 2,
+          '',
+          {
+            fontSize: '32px',
+            align: 'center'
+          }
+        ).setOrigin(0.5);
+        tile.settlementIcon.setVisible(false);
+
         // Track hover state
         let isHovered = false;
 
@@ -111,7 +159,7 @@ export class GameScene extends Scene {
               tile.costText?.setText('Not connected to owned tiles');
             } else {
               const unlockedTilesCount = this.map.flat().filter(t => t.unlocked).length;
-              const unlockCost = getUnlockCost(unlockedTilesCount);
+              const unlockCost = calculateUnlockCost(unlockedTilesCount);
               
               if (unlockedTilesCount === 0) {
                 tile.costText?.setText('Free!');
@@ -145,7 +193,7 @@ export class GameScene extends Scene {
               if (!hasAdjacentUnlocked) {
                 tile.costText.setText('Not connected to owned tiles');
               } else {
-                const unlockCost = getUnlockCost(unlockedTilesCount);
+                const unlockCost = calculateUnlockCost(unlockedTilesCount);
                 if (unlockedTilesCount === 0) {
                   tile.costText.setText('Free!');
                 } else if (unlockedTilesCount === 1) {
@@ -189,6 +237,12 @@ export class GameScene extends Scene {
     this.map = gameState.map;
     const unlockedTilesCount = gameState.map.flat().filter(t => t.unlocked).length;
     
+    // Show/hide settlement preview based on game phase and selected type
+    this.showSettlementPreview(
+      gameState.phase === 'placing-settlement',
+      gameState.selectedSettlementType
+    );
+    
     // Update each tile's appearance based on new state
     for (let y = 0; y < this.map.length; y++) {
       for (let x = 0; x < this.map[y].length; x++) {
@@ -206,6 +260,16 @@ export class GameScene extends Scene {
             tile.icon.setText(this.getTerrainIcon(iconToShow));
           }
           
+          // Update settlement icon if there's a settlement
+          if (tile.settlementIcon) {
+            if (tileData.settlement) {
+              tile.settlementIcon.setText(this.getSettlementIcon(tileData.settlement.type));
+              tile.settlementIcon.setVisible(true);
+            } else {
+              tile.settlementIcon.setVisible(false);
+            }
+          }
+          
           // Use the new update method with unlocked tiles count
           tile.updateCost(tileData.unlocked, unlockedTilesCount);
           
@@ -214,6 +278,11 @@ export class GameScene extends Scene {
             tile.setStrokeStyle(2, 0xffff00);
           } else {
             tile.setStrokeStyle(1, 0x000000);
+          }
+
+          // Highlight valid settlement locations
+          if (gameState.phase === 'placing-settlement' && tileData.unlocked && !tileData.settlement) {
+            tile.setStrokeStyle(2, 0x00ff00);
           }
         }
       }

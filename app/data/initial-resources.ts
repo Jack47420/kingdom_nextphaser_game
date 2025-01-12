@@ -23,6 +23,16 @@ export const initialResources: Resource[] = [
     maxAmount: 10000
   },
   {
+    id: 'coal',
+    name: 'Coal',
+    amount: 0,
+    icon: 'Circle',
+    category: 'basic',
+    rarity: 'uncommon',
+    origin: 'mountain',
+    maxAmount: 10000
+  },
+  {
     id: 'iron',
     name: 'Iron',
     amount: 0,
@@ -41,36 +51,6 @@ export const initialResources: Resource[] = [
     rarity: 'common',
     origin: 'mine',
     maxAmount: 8000
-  },
-  {
-    id: 'coal',
-    name: 'Coal',
-    amount: 0,
-    icon: 'Circle',
-    category: 'basic',
-    rarity: 'uncommon',
-    origin: 'mountain',
-    maxAmount: 10000
-  },
-  {
-    id: 'leather',
-    name: 'Leather',
-    amount: 0,
-    icon: 'Scroll',
-    category: 'basic',
-    rarity: 'rare',
-    origin: 'grass',
-    maxAmount: 5000
-  },
-  {
-    id: 'cloth',
-    name: 'Cloth',
-    amount: 0,
-    icon: 'Shirt',
-    category: 'basic',
-    rarity: 'uncommon',
-    origin: 'grass',
-    maxAmount: 5000
   },
   {
     id: 'herbs',
@@ -124,6 +104,26 @@ export const initialResources: Resource[] = [
     maxAmount: 1200
   },
   // Crafted
+  {
+    id: 'leather',
+    name: 'Leather',
+    amount: 0,
+    icon: 'Scroll',
+    category: 'crafted',
+    rarity: 'rare',
+    origin: 'crafted',
+    maxAmount: 5000
+  },
+  {
+    id: 'cloth',
+    name: 'Cloth',
+    amount: 0,
+    icon: 'Shirt',
+    category: 'crafted',
+    rarity: 'uncommon',
+    origin: 'crafted',
+    maxAmount: 5000
+  },
   {
     id: 'tools',
     name: 'Tools',

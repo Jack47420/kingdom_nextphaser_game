@@ -4,22 +4,65 @@ import { useState, useEffect } from 'react';
 import { GameHeader } from './components/game/GameHeader';
 import { GameMap } from './components/game/GameMap';
 import { ResourceGrid } from './components/game/ResourceGrid';
+import { SettlementPanel } from './components/game/SettlementPanel';
 import { initialResources } from './data/initial-resources';
-import { GameState, MapTile } from './types/game';
+import { GameState, MapTile, Settlement } from './types/game';
 import { generateInitialMap, handleFirstTileSelection } from './lib/map-utils';
 import { toast } from 'sonner';
-import { GRID_SIZE, RESOURCE_RATES, UPDATE_RATE, getUnlockCost } from './config/game-config';
+import { GRID_SIZE, RESOURCE_RATES, UPDATE_RATE, TILE_SIZE } from './config/game-config';
+import { calculateUnlockCost } from './config/unlock-costs';
 import { SettingsDialog } from './components/game/SettingsDialog';
 import { PauseButton } from './components/game/PauseButton';
+import { Card } from '@/components/ui/card';
 
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>(() => ({
     resources: initialResources,
     lastUpdate: Date.now(),
     map: generateInitialMap(GRID_SIZE),
-    phase: 'selecting-start' as const
+    phase: 'selecting-start' as const,
+    selectedSettlementType: undefined
   }));
   const [isPaused, setIsPaused] = useState(false);
+
+  // Calculate dimensions
+  const gameDimensions = {
+    width: GRID_SIZE * TILE_SIZE,
+    height: GRID_SIZE * TILE_SIZE,
+    mobileHeight: GRID_SIZE * TILE_SIZE + 120 // Additional space for buttons on mobile
+  };
+
+  // Calculate scale based on screen size
+  const [gameScale, setGameScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      // Get the screen width minus some padding for margins
+      const availableWidth = window.innerWidth - 32; // 32px for padding
+      const targetWidth = gameDimensions.width;
+      
+      // If screen is smaller than game, calculate scale
+      if (availableWidth < targetWidth) {
+        setGameScale(availableWidth / targetWidth);
+      } else {
+        setGameScale(1);
+      }
+    };
+
+    // Initial calculation
+    updateScale();
+
+    // Update on resize
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [gameDimensions.width]);
+
+  useEffect(() => {
+    // Set CSS custom properties
+    document.documentElement.style.setProperty('--game-height', `${gameDimensions.height * gameScale}px`);
+    document.documentElement.style.setProperty('--game-width', `${gameDimensions.width * gameScale}px`);
+    document.documentElement.style.setProperty('--game-mobile-height', `${gameDimensions.mobileHeight * gameScale}px`);
+  }, [gameDimensions.height, gameDimensions.mobileHeight, gameScale]);
 
   // Add system theme detection
   useEffect(() => {
@@ -69,6 +112,28 @@ export default function Home() {
     };
   }, []);
 
+  const handleStartSettlementPlacement = (type: Settlement['type']) => {
+    if (gameState.phase === 'selecting-start') {
+      toast.error('Please select your starting position first!');
+      return;
+    }
+    
+    if (isPaused) {
+      toast.error('Game is paused! Unpause to place settlements.');
+      return;
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      phase: prev.phase === 'placing-settlement' && prev.selectedSettlementType === type 
+        ? 'playing' 
+        : 'placing-settlement',
+      selectedSettlementType: prev.phase === 'placing-settlement' && prev.selectedSettlementType === type 
+        ? undefined 
+        : type
+    }));
+  };
+
   const handleTileClick = (x: number, y: number) => {
     if (isPaused) {
       toast.error('Game is paused! Unpause to continue playing.');
@@ -89,7 +154,36 @@ export default function Home() {
     }
 
     const tile = gameState.map[y][x];
+
+    // Handle settlement placement
+    if (gameState.phase === 'placing-settlement' && gameState.selectedSettlementType) {
+      if (!tile.unlocked) {
+        toast.error('You can only place settlements on unlocked tiles!');
+        return;
+      }
+
+      if (tile.settlement) {
+        toast.error('This tile already has a settlement!');
+        return;
+      }
+
+      setGameState(prev => ({
+        ...prev,
+        map: prev.map.map((row, y2) =>
+          row.map((tile, x2) =>
+            x === x2 && y === y2
+              ? { ...tile, settlement: { type: prev.selectedSettlementType!, level: 1 } }
+              : tile
+          )
+        ),
+        phase: 'playing',
+        selectedSettlementType: undefined
+      }));
+      toast.success(`${gameState.selectedSettlementType.charAt(0).toUpperCase() + gameState.selectedSettlementType.slice(1)} placed successfully!`);
+      return;
+    }
     
+    // Handle tile unlocking
     if (!tile.unlocked) {
       // Check if adjacent to an unlocked tile
       const hasAdjacentUnlocked = [
@@ -106,7 +200,7 @@ export default function Home() {
 
       // Count currently unlocked tiles
       const unlockedTilesCount = gameState.map.flat().filter(t => t.unlocked).length;
-      const unlockCost = getUnlockCost(unlockedTilesCount);
+      const unlockCost = calculateUnlockCost(unlockedTilesCount);
 
       // Check resources
       const wood = gameState.resources.find(r => r.id === 'wood');
@@ -198,9 +292,10 @@ export default function Home() {
           const producingTiles = prev.map.flat().filter(
             tile => tile.unlocked && (
               (tile.terrain === 'forest' && resource.id === 'wood') ||
-              (tile.terrain === 'mountain' && resource.id === 'stone') ||
-              (tile.terrain === 'mine' && (resource.id === 'iron' || resource.id === 'copper')) ||
-              (tile.terrain === 'water' && resource.id === 'water')
+              (tile.terrain === 'mountain' && (resource.id === 'stone' || resource.id === 'coal')) ||
+              (tile.terrain === 'mine' && (resource.id === 'iron' || resource.id === 'copper' || resource.id === 'diamond' || resource.id === 'ruby' || resource.id === 'sapphire')) ||
+              (tile.terrain === 'water' && resource.id === 'water') ||
+              (tile.terrain === 'grass' && resource.id === 'herbs')
             )
           ).length;
 
@@ -239,7 +334,30 @@ export default function Home() {
         <SettingsDialog onRestart={handleRestart} />
       </div>
       <GameHeader />
-      <GameMap gameState={gameState} onTileClick={handleTileClick} />
+      <div className="w-full flex justify-center">
+        <Card 
+          className="relative w-full p-4 bg-gradient-to-br from-slate-100 to-slate-200 border-gray-200 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700 min-h-[var(--game-mobile-height)] lg:min-h-[var(--game-height)] min-w-[var(--game-width)]"
+        >
+          <div className="flex flex-col lg:flex-row items-center justify-center relative gap-4 lg:gap-0">
+            <div 
+              className="flex flex-col lg:flex-row gap-4 items-center"
+            >
+              <div className="order-2 lg:order-1 flex lg:flex-col gap-2">
+                <SettlementPanel onStartPlacement={handleStartSettlementPlacement} />
+              </div>
+              <div 
+                className="order-1 lg:order-2 relative gap-1"
+                style={{ 
+                  width: `${gameDimensions.width * gameScale}px`,
+                  height: `${gameDimensions.height * gameScale}px`,
+                }}
+              >
+                <GameMap gameState={gameState} onTileClick={handleTileClick} scale={gameScale} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
       <ResourceGrid resources={gameState.resources} map={gameState.map} />
     </main>
   );
