@@ -9,7 +9,7 @@ interface TileSprite extends GameObjects.Rectangle {
   tileData: MapTile;
   terrainIcon?: GameObjects.Text;  // Terrain icon
   icons: GameObjects.Text[];  // Array of all icons (terrain, settlement, etc.)
-  updateCost: (unlocked: boolean, unlockedTilesCount: number) => void;
+  defaultStrokeColor: number;  // Store the default stroke color
 }
 
 export class GameScene extends Scene {
@@ -20,6 +20,8 @@ export class GameScene extends Scene {
   private onTileClick: (x: number, y: number) => void;  // Click handler passed from parent
   private isDarkTheme: boolean;
   private settlementPreview?: GameObjects.Text; // Preview of settlement when dragging
+  private currentGameState?: GameState; // Store current game state
+  private hoveredTile?: { x: number; y: number }; // Track currently hovered tile
   
   constructor(onTileClick: (x: number, y: number) => void, isDarkTheme: boolean) {
     super({ key: 'GameScene' });  // Initialize Phaser Scene with unique key
@@ -83,6 +85,77 @@ export class GameScene extends Scene {
         this.settlementPreview.setPosition(pointer.x, pointer.y);
       }
     });
+
+    // Clear hover state when pointer leaves game
+    this.input.on('pointerout', () => {
+      if (this.hoveredTile) {
+        const tile = this.tiles[this.hoveredTile.y]?.[this.hoveredTile.x];
+        if (tile) {
+          this.clearHoverEffect(tile);
+        }
+        this.hoveredTile = undefined;
+      }
+    });
+  }
+
+  // Phaser's update loop - called every frame
+  update() {
+    const pointer = this.input.activePointer;
+    if (pointer && pointer.isDown === false) { // Only check when not clicking
+      const tileX = Math.floor(pointer.x / this.tileSize);
+      const tileY = Math.floor(pointer.y / this.tileSize);
+      
+      // If pointer is within game bounds
+      if (tileX >= 0 && tileX < GRID_SIZE && tileY >= 0 && tileY < GRID_SIZE) {
+        // If we're not already hovering this tile
+        if (this.hoveredTile?.x !== tileX || this.hoveredTile?.y !== tileY) {
+          // Clear previous hover if exists
+          if (this.hoveredTile) {
+            const prevTile = this.tiles[this.hoveredTile.y]?.[this.hoveredTile.x];
+            if (prevTile) {
+              this.clearHoverEffect(prevTile);
+            }
+          }
+          
+          // Set new hover
+          this.hoveredTile = { x: tileX, y: tileY };
+          const tile = this.tiles[tileY][tileX];
+          if (tile) {
+            this.updateHoverEffect(tile, tileX, tileY);
+          }
+        } else if (this.hoveredTile) {
+          // Refresh hover effect on current tile
+          const tile = this.tiles[tileY][tileX];
+          if (tile) {
+            this.updateHoverEffect(tile, tileX, tileY);
+          }
+        }
+      } else if (this.hoveredTile) {
+        // Pointer outside game bounds, clear hover
+        const tile = this.tiles[this.hoveredTile.y]?.[this.hoveredTile.x];
+        if (tile) {
+          this.clearHoverEffect(tile);
+        }
+        this.hoveredTile = undefined;
+      }
+    }
+  }
+
+  private clearHoverEffect(tile: TileSprite) {
+    if (this.currentGameState) {
+      const isSelected = this.currentGameState.selectedTile?.x === tile.tileData.x && 
+                        this.currentGameState.selectedTile?.y === tile.tileData.y;
+      const isValidForSettlement = this.currentGameState.phase === 'placing-settlement' && 
+                                  tile.tileData.unlocked && !tile.tileData.settlement;
+      
+      if (isSelected) {
+        tile.setStrokeStyle(2, 0xffff00);
+      } else if (isValidForSettlement) {
+        tile.setStrokeStyle(2, 0x00ff00);
+      } else {
+        tile.setStrokeStyle(1, tile.defaultStrokeColor);
+      }
+    }
   }
 
   showSettlementPreview(show: boolean, type?: 'village' | 'town' | 'city') {
@@ -112,15 +185,14 @@ export class GameScene extends Scene {
         
         tile.tileData = this.map[y][x];
         tile.icons = [];
+        tile.defaultStrokeColor = this.isDarkTheme ? 0x222222 : 0xeeeeee;
 
         // Add visual and interactive properties
-        tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
+        tile.setStrokeStyle(1, tile.defaultStrokeColor);
         tile.setInteractive();
 
         // Create and position icons
         tile.icons = this.createTileIcons(tile, x, y);
-
-
         
         tile.on('pointerdown', () => {
           this.onTileClick(x, y);  // Handle clicks
@@ -187,12 +259,47 @@ export class GameScene extends Scene {
     tile.icons = this.createTileIcons(tile, tile.tileData.x, tile.tileData.y);
   }
 
+  private hasAdjacentUnlockedTile(x: number, y: number): boolean {
+    const adjacentPositions = [
+      [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+    ];
+    
+    return adjacentPositions.some(([adjX, adjY]) => 
+      adjX >= 0 && adjX < GRID_SIZE && adjY >= 0 && adjY < GRID_SIZE && 
+      this.map[adjY][adjX].unlocked
+    );
+  }
+
+  private updateHoverEffect(tile: TileSprite, x: number, y: number) {
+    if (!tile.tileData.unlocked && this.currentGameState) {
+      const hasAdjacentUnlocked = this.hasAdjacentUnlockedTile(x, y);
+      if (hasAdjacentUnlocked) {
+        const unlockedTilesCount = this.currentGameState.map.flat().filter(t => t.unlocked).length;
+        const unlockCost = calculateUnlockCost(unlockedTilesCount);
+        
+        const woodResource = this.currentGameState.resources.find(r => r.id === 'wood');
+        const stoneResource = this.currentGameState.resources.find(r => r.id === 'stone');
+        
+        const canAfford = unlockedTilesCount === 0 || 
+          (unlockedTilesCount === 1 && woodResource && woodResource.amount >= unlockCost.wood) ||
+          (woodResource && stoneResource && 
+           woodResource.amount >= unlockCost.wood && 
+           stoneResource.amount >= unlockCost.stone);
+        
+        tile.setStrokeStyle(2, canAfford ? 0x00ff00 : 0xff0000);
+        return; // Exit early if we applied hover effect
+      }
+    }
+    // If we get here, no hover effect was applied, so we should use default stroke
+    tile.setStrokeStyle(1, tile.defaultStrokeColor);
+  }
+
   // Updates the visual state when game state changes
   updateGameState(gameState: GameState) {
     if (!gameState.map) return;
     
     this.map = gameState.map;
-    const unlockedTilesCount = gameState.map.flat().filter(t => t.unlocked).length;
+    this.currentGameState = gameState;
     
     // Show/hide settlement preview based on game phase and selected type
     this.showSettlementPreview(
@@ -214,13 +321,15 @@ export class GameScene extends Scene {
           // Update icons
           this.updateTileIcons(tile);
           
-          // Update selection highlight
-          if (gameState.selectedTile?.x === x && gameState.selectedTile?.y === y) {
+          // Update selection highlight or hover effect
+          if (this.hoveredTile?.x === x && this.hoveredTile?.y === y) {
+            this.updateHoverEffect(tile, x, y);
+          } else if (gameState.selectedTile?.x === x && gameState.selectedTile?.y === y) {
             tile.setStrokeStyle(2, 0xffff00);
           } else if (gameState.phase === 'placing-settlement' && tileData.unlocked && !tileData.settlement) {
             tile.setStrokeStyle(2, 0x00ff00);
           } else {
-            tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
+            tile.setStrokeStyle(1, tile.defaultStrokeColor);
           }
         }
       }
@@ -237,9 +346,9 @@ export class GameScene extends Scene {
         const tileData = this.map[y][x];
         
         if (tile) {
-          // Update tile colors
+          // Update tile colors and default stroke
+          tile.defaultStrokeColor = this.isDarkTheme ? 0x222222 : 0xeeeeee;
           tile.setFillStyle(this.getTileColor(tileData.unlocked));
-          tile.setStrokeStyle(1, this.isDarkTheme ? 0x222222 : 0xeeeeee);
           
         }
       }
